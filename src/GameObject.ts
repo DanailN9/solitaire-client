@@ -1,18 +1,24 @@
 import * as PIXI from 'pixi.js';
 import { COL_LENGTH, ROW_LENGTH } from './utility';
 
-export class GameObject {
 
+const gameSection = document.getElementById('game');
+let created: boolean = false;
+
+export class GameObject {
     private app: PIXI.Application;
     private cards: PIXI.Sprite[];
 
     constructor() {
-        this.app = new PIXI.Application({
-            width: 1800,
-            height: 840,
-            background: 0x999999
-        });
-        document.body.appendChild(this.app.view as HTMLCanvasElement);
+        if (created == false) {
+            this.app = new PIXI.Application({
+                width: 1800,
+                height: 840,
+                background: 0x999999
+            });
+            gameSection.appendChild(this.app.view as HTMLCanvasElement);
+            created = true;
+        }
     }
 
     public generateBackground() {

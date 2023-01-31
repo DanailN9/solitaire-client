@@ -16,7 +16,6 @@ initForm.addEventListener('submit', async event => {
     await connection.open();
     engine(connection);
     showBoard();
-
     connection.send('startGame');
 });
 
@@ -25,17 +24,14 @@ document.getElementById('disconnect').addEventListener('click', () => {
     showInit();
 });
 
-//START
-showBoard();
-const game = new GameObject();
-game.generateBackground();
-game.genaratePlaces();
-
-
 
 function showBoard() {
     initSection.style.display = 'none';
     gameSection.style.display = 'block';
+    //START
+    const game = new GameObject();
+    game.generateBackground();
+    game.genaratePlaces();
 }
 
 function showInit() {
