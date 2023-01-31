@@ -1,6 +1,6 @@
 import { Connection } from "./Connection";
 import { engine } from "./engine";
-
+import { GameObject } from "./GameObject";
 
 const initForm = document.querySelector('form');
 const initSection = document.getElementById('init');
@@ -24,6 +24,13 @@ document.getElementById('disconnect').addEventListener('click', () => {
     connection?.disconnect();
     showInit();
 });
+
+//START
+showBoard();
+const game = new GameObject();
+game.generateBackground();
+
+
 
 function showBoard() {
     initSection.style.display = 'none';
