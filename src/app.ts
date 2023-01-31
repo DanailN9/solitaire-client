@@ -29,6 +29,7 @@ document.getElementById('disconnect').addEventListener('click', () => {
 showBoard();
 const game = new GameObject();
 game.generateBackground();
+game.genaratePlaces();
 
 
 
