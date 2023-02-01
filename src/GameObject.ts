@@ -105,10 +105,6 @@ export class GameObject {
     
     }
 
-    public async loadTextures() {
-        return PIXI.Texture.from(`assets/22331.jpg`);
-    }
-
     public generateMask() {
         const mask = new PIXI.Graphics();
         mask.beginFill(0x000000);
@@ -116,6 +112,10 @@ export class GameObject {
         mask.endFill();
 
         return mask;
+    }
+
+    public async loadTextures() {
+        return PIXI.Texture.from(`assets/22331.jpg`);
     }
 
     private generateSinglePlace() {

@@ -26,13 +26,7 @@ export class Card {
         return this.sprite;
     }
 
-
     public flip() {
-        this.sprite.interactive = true;
-        this.sprite.on('pointertap', () => {
-
-            gsap.to(this.sprite, { pixi: { x: 300 }, duration: 2 })
-        })
 
     }
 
