@@ -32,6 +32,7 @@ function showBoard() {
     const game = new GameObject();
     game.generateBackground();
     game.genaratePlaces();
+    game.generateCard()
 }
 
 function showInit() {

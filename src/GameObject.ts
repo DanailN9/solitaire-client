@@ -50,6 +50,48 @@ export class GameObject {
         this.app.stage.addChild(lastPlace);
     }
 
+    public async generateCard() {
+        const sprites: PIXI.Sprite[] = [];
+        //const cardTypes = ['C', 'H', 'S', 'D'];
+
+        const texture = await this.loadTextures();
+
+        // create a rectangle for each card
+        let x = 50;
+        let y = 850;
+        const cardsPerRow = 13;
+
+
+
+        for (let i = 0; i < 52; i++) {
+            const sprite = new PIXI.Sprite(new PIXI.Texture(texture.baseTexture, new PIXI.Rectangle(x, y, 415, 630)));
+
+            sprite.scale.x = 0.4;
+            sprite.scale.y = 0.4;
+
+            // position the sprite
+            sprite.x = (i % 13) * (sprite.width + 10) + 10;
+            sprite.y = Math.floor(i / 13) * (sprite.height + 10) + 10;
+
+            sprites.push(sprite);
+            this.app.stage.addChild(sprite);
+
+            // update x and y for the next card
+            x += 458;
+            if (x >= 6000) {
+                x = 42;
+                y += 656;
+            }
+
+            sprite.x = 25;
+            sprite.y = 13;
+        }
+    }
+
+    public async loadTextures() {
+        return PIXI.Texture.from(`assets/22331.jpg`);
+    }
+
     private generateSinglePlace() {
         const place = new PIXI.Graphics();
         place.beginFill(0x008000);
