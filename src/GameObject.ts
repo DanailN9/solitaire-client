@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { Card } from './Card';
-import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, CARD_HEIGHT, CARD_WIDTH, COL_LENGTH, ROW_LENGTH } from './utility';
+import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, CARD_HEIGHT, CARD_WIDTH, COL_LENGTH, ROW_LENGTH, slotPositions } from './utility';
 
 
 const gameSection = document.getElementById('game');
@@ -43,7 +43,7 @@ export class GameObject {
                 place.position.set(xStartPosition, yStartPosition);
                 this.app.stage.addChild(place);
                 xStartPosition += 256;
-                console.log(yStartPosition);
+                slotPositions.push(place);
             }
             yStartPosition += 270;
             xStartPosition = 30;
@@ -63,9 +63,11 @@ export class GameObject {
             const suit = suits[Math.floor(i / 13)];
             const card = new Card(number, suit);
             card.sprite = new PIXI.Sprite(new PIXI.Texture(texture[0].baseTexture, new PIXI.Rectangle(xClubsStartpoint, yClubsStartpoint, CARD_WIDTH, CARD_HEIGHT)));
+
             card.backSprite = new PIXI.Sprite(texture[1]);
-            card.backSprite.interactive = true;
+            card.container.interactive = true;
             card.flip()
+            //card.moveTo();
 
             card.backSprite.scale.x = 0.14;
             card.backSprite.scale.y = 0.14;
@@ -73,8 +75,9 @@ export class GameObject {
 
             card.sprite.scale.x = 0.4;
             card.sprite.scale.y = 0.4;
-            card.sprite.anchor.set(0.5, 0.5)
+            card.sprite.anchor.set(0.5, 0.5);
 
+            //constants
             const rowSpacing = 40;
             const columnSpacing = card.sprite.width + 90;
             const xStart = 116;
@@ -83,9 +86,13 @@ export class GameObject {
 
 
             if (excludedIndices.includes(i)) {
-                this.deck.push(card);
-                continue;
+                card.sprite.x = 110;
+                card.backSprite.x = card.sprite.x;
+                card.sprite.y = 140;
+                card.backSprite.y = card.sprite.y;
+
             } else if (i < 49) {
+
                 card.sprite.x = (i % 7) * columnSpacing + xStart;
                 card.backSprite.x = card.sprite.x;
                 card.sprite.y = yStart + Math.floor(i / 7) * (rowSpacing)
@@ -99,12 +106,13 @@ export class GameObject {
             }
 
             this.deck.push(card);
-            this.app.stage.addChild(card.sprite, card.backSprite);
 
-            //generateMask
+            //generate Mask
             const cardMask = card.generateMask(card.sprite.x, card.sprite.y);
 
-            this.app.stage.addChild(cardMask);
+            //add to Stage
+            card.container.addChild(card.backSprite, card.sprite, cardMask);
+            this.app.stage.addChild(card.container);
 
             xClubsStartpoint += 458;
             if (xClubsStartpoint >= ASSET_WIDTH - 300) {
@@ -116,14 +124,12 @@ export class GameObject {
                 }
             }
         }
-        console.log(this.deck);
     }
 
     public generateAllMask() {
         this.deck.forEach((c) => {
             const m = c.generateMask(32, 280);
-            c.sprite.mask = m;
-            this.app.stage.addChild(m);
+            c.container.mask = m;
         })
     }
 
