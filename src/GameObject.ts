@@ -8,7 +8,7 @@ let created: boolean = false;
 
 export class GameObject {
     private app: PIXI.Application;
-    private cards: Card[] = []; 
+    private deck: Card[] = [];
 
     constructor() {
         if (created == false) {
@@ -55,7 +55,7 @@ export class GameObject {
         const texture = await this.loadTextures();
 
         let xClubsStartpoint = 50;
-        let yClubsStartpoint = 845;
+        let yClubsStartpoint = 848;
 
         for (let i = 0; i < 52; i++) {
 
@@ -63,7 +63,6 @@ export class GameObject {
             const suit = suits[Math.floor(i / 13)];
             const card = new Card(number, suit);
             card.sprite = new PIXI.Sprite(new PIXI.Texture(texture.baseTexture, new PIXI.Rectangle(xClubsStartpoint, yClubsStartpoint, CARD_WIDTH, CARD_HEIGHT)));
-            card.flip();
 
             card.sprite.scale.x = 0.4;
             card.sprite.scale.y = 0.4;
@@ -76,7 +75,7 @@ export class GameObject {
 
 
             if (excludedIndices.includes(i)) {
-                this.cards.push(card);
+                this.deck.push(card);
                 continue;
             } else if (i < 49) {
                 card.sprite.x = (i % 7) * columnSpacing + xStart;
@@ -87,31 +86,32 @@ export class GameObject {
                 card.sprite.y = 10;
             }
 
-            this.cards.push(card);
+            this.deck.push(card);
             this.app.stage.addChild(card.sprite);
 
+            //generateMask
+            const cardMask = card.generateMask(card.sprite.x  ,card.sprite.y);
+            this.app.stage.addChild(cardMask);
 
             xClubsStartpoint += 458;
             if (xClubsStartpoint >= ASSET_WIDTH - 300) {
                 xClubsStartpoint = 42;
-                yClubsStartpoint += 656;
+                yClubsStartpoint += 660;
 
                 if (yClubsStartpoint >= ASSET_HEIGHT - 630) {
                     break;
                 }
             }
         }
-        console.log(this.cards);
-    
+        console.log(this.deck);
     }
 
-    public generateMask() {
-        const mask = new PIXI.Graphics();
-        mask.beginFill(0x000000);
-        mask.drawRoundedRect(0, 0, 160, 256, 15);
-        mask.endFill();
-
-        return mask;
+    public generateAllMask() {
+        this.deck.forEach((c) => {
+            const m = c.generateMask(32, 280);
+            c.sprite.mask = m;
+            this.app.stage.addChild(m);
+        })
     }
 
     public async loadTextures() {

@@ -37,4 +37,14 @@ export class Card {
     public deal() {
 
     }
+
+    public generateMask(x: number, y: number) {
+        const mask = new PIXI.Graphics();
+        mask.beginFill(0x000000);
+        mask.drawRoundedRect(0, 0, 166  , 256, 15);
+        mask.endFill();
+        mask.position.set(x, y);
+        this.sprite.mask = mask;
+        return mask;
+    }
 }

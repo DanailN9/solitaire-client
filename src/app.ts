@@ -24,7 +24,6 @@ document.getElementById('disconnect').addEventListener('click', () => {
     showInit();
 });
 
-
 function showBoard() {
     initSection.style.display = 'none';
     gameSection.style.display = 'block';
@@ -33,6 +32,7 @@ function showBoard() {
     game.generateBackground();
     game.genaratePlaces();
     game.generateCards();
+    game.generateAllMask();
 }
 
 function showInit() {
