@@ -62,15 +62,23 @@ export class GameObject {
             const number = i % 13;
             const suit = suits[Math.floor(i / 13)];
             const card = new Card(number, suit);
-            card.sprite = new PIXI.Sprite(new PIXI.Texture(texture.baseTexture, new PIXI.Rectangle(xClubsStartpoint, yClubsStartpoint, CARD_WIDTH, CARD_HEIGHT)));
+            card.sprite = new PIXI.Sprite(new PIXI.Texture(texture[0].baseTexture, new PIXI.Rectangle(xClubsStartpoint, yClubsStartpoint, CARD_WIDTH, CARD_HEIGHT)));
+            card.backSprite = new PIXI.Sprite(texture[1]);
+            card.backSprite.interactive = true;
+            card.flip()
+
+            card.backSprite.scale.x = 0.14;
+            card.backSprite.scale.y = 0.14;
+            card.backSprite.anchor.set(0.5, 0.5)
 
             card.sprite.scale.x = 0.4;
             card.sprite.scale.y = 0.4;
+            card.sprite.anchor.set(0.5, 0.5)
 
             const rowSpacing = 40;
             const columnSpacing = card.sprite.width + 90;
-            const xStart = 32;
-            const yStart = 280;
+            const xStart = 116;
+            const yStart = 410;
             const excludedIndices = [7, 14, 15, 21, 22, 23, 28, 29, 30, 31, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47];
 
 
@@ -79,18 +87,23 @@ export class GameObject {
                 continue;
             } else if (i < 49) {
                 card.sprite.x = (i % 7) * columnSpacing + xStart;
+                card.backSprite.x = card.sprite.x;
                 card.sprite.y = yStart + Math.floor(i / 7) * (rowSpacing)
+                card.backSprite.y = card.sprite.y;
 
             } else {
-                card.sprite.x = 30;
-                card.sprite.y = 10;
+                card.sprite.x = 110;
+                card.backSprite.x = card.sprite.x;
+                card.sprite.y = 140;
+                card.backSprite.y = card.sprite.y;
             }
 
             this.deck.push(card);
-            this.app.stage.addChild(card.sprite);
+            this.app.stage.addChild(card.sprite, card.backSprite);
 
             //generateMask
-            const cardMask = card.generateMask(card.sprite.x  ,card.sprite.y);
+            const cardMask = card.generateMask(card.sprite.x, card.sprite.y);
+
             this.app.stage.addChild(cardMask);
 
             xClubsStartpoint += 458;
@@ -115,7 +128,7 @@ export class GameObject {
     }
 
     public async loadTextures() {
-        return PIXI.Texture.from(`assets/22331.jpg`);
+        return [PIXI.Texture.from(`assets/22331.jpg`), PIXI.Texture.from(`assets/back.png`)];
     }
 
     private generateSinglePlace() {
