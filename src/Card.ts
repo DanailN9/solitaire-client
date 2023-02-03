@@ -36,26 +36,29 @@ export class Card {
         return this.backSprite;
     }
 
-    public flip() {
+    public backflip() {
         this.container.on('pointertap', () => {
-            if (this.fliped === false) {
-                gsap.to(this.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
-                gsap.fromTo(this.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.4, skewY: 0 }, duration: 0.1, delay: 0.1 });
-                this.fliped = true
-            }
+           this.flip();
         });
     }
 
-    public moveTo() {
-        // this.container.on('pointertap', () => {
-        //     slotPositions.forEach(element => {
-        //         element.interactive = true;
-        //         element.on('pointertap', () => {
-        //             gsap.to(this.container, { pixi: { x: element.x, y: element.y }, duration: 2 });
-        //         });
-        //     });
+    public flip() {
+        if (this.fliped === false ) {
+            gsap.to(this.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
+            gsap.fromTo(this.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.4, skewY: 0 }, duration: 0.1, delay: 0.1 });
+            this.fliped = true
+        }
+    }
 
-        // });
+    public moveTo() {
+        this.container.on('pointertap', () => {
+            slotPositions.forEach(element => {
+                element.interactive = true;
+                element.on('pointertap', () => {
+                    gsap.to(this.container, { pixi: { x: element.x, y: element.y }, duration: 2 });
+                });
+            });
+        });
     }
 
     public deal() {
