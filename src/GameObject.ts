@@ -31,8 +31,8 @@ export class GameObject {
     }
 
     public genaratePlaces() {
-        let xStartPosition = 30;
-        let yStartPosition = 10;
+        let xStartPosition = 113;
+        let yStartPosition = 137;
         for (let row = 0; row < ROW_LENGTH; row++) {
             for (let col = 0; col < COL_LENGTH; col++) {
                 if (row == 0 && col == 2) {
@@ -46,7 +46,7 @@ export class GameObject {
                 slotPositions.push(place);
             }
             yStartPosition += 270;
-            xStartPosition = 30;
+            xStartPosition = 113;
         }
     }
 
@@ -66,8 +66,10 @@ export class GameObject {
 
             card.backSprite = new PIXI.Sprite(texture[1]);
             card.container.interactive = true;
+            card.container.pivot.x = card.container.width / 2;
+            card.container.pivot.y = card.container.height / 2;
             card.flip()
-            //card.moveTo();
+            // card.moveTo();
 
             card.backSprite.scale.x = 0.14;
             card.backSprite.scale.y = 0.14;
@@ -77,6 +79,11 @@ export class GameObject {
             card.sprite.scale.y = 0.4;
             card.sprite.anchor.set(0.5, 0.5);
 
+            card.sprite.x = card.sprite.x - card.container.x;
+            card.sprite.y = card.sprite.y - card.container.y;
+            card.backSprite.x = card.sprite.x - card.container.x;
+            card.backSprite.y = card.sprite.y - card.container.y;
+
             //constants
             const rowSpacing = 40;
             const columnSpacing = card.sprite.width + 90;
@@ -85,24 +92,17 @@ export class GameObject {
             const excludedIndices = [7, 14, 15, 21, 22, 23, 28, 29, 30, 31, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47];
 
 
+
             if (excludedIndices.includes(i)) {
-                card.sprite.x = 110;
-                card.backSprite.x = card.sprite.x;
-                card.sprite.y = 140;
-                card.backSprite.y = card.sprite.y;
+                card.container.x = slotPositions[0].x;
+                card.container.y = slotPositions[0].y;
 
             } else if (i < 49) {
-
-                card.sprite.x = (i % 7) * columnSpacing + xStart;
-                card.backSprite.x = card.sprite.x;
-                card.sprite.y = yStart + Math.floor(i / 7) * (rowSpacing)
-                card.backSprite.y = card.sprite.y;
-
+                card.container.x = (i % 7) * columnSpacing + xStart;
+                card.container.y = yStart + Math.floor(i / 7) * (rowSpacing)
             } else {
-                card.sprite.x = 110;
-                card.backSprite.x = card.sprite.x;
-                card.sprite.y = 140;
-                card.backSprite.y = card.sprite.y;
+                card.container.x = slotPositions[0].x;
+                card.container.y = slotPositions[0].y;
             }
 
             this.deck.push(card);
@@ -111,7 +111,7 @@ export class GameObject {
             const cardMask = card.generateMask(card.sprite.x, card.sprite.y);
 
             //add to Stage
-            card.container.addChild(card.backSprite, card.sprite, cardMask);
+            card.container.addChild(card.sprite, card.backSprite, cardMask);
             this.app.stage.addChild(card.container);
 
             xClubsStartpoint += 458;
@@ -140,9 +140,11 @@ export class GameObject {
     private generateSinglePlace() {
         const place = new PIXI.Graphics();
         place.beginFill(0x008000);
-        place.drawRoundedRect(3, 3, 160, 247, 15);
+        place.drawRoundedRect(0, 0, 160, 247, 15);
         place.endFill();
-        place.position.set(0, 0)
+        place.pivot.x = place.width / 2;
+        place.pivot.y = place.height / 2;
+
 
         return place;
     }
