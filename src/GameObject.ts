@@ -69,7 +69,7 @@ export class GameObject {
             card.container.pivot.x = card.container.width / 2;
             card.container.pivot.y = card.container.height / 2;
             card.flip()
-            // card.moveTo();
+            card.moveTo(this.deck);
 
             card.backSprite.scale.x = 0.14;
             card.backSprite.scale.y = 0.14;
@@ -90,8 +90,6 @@ export class GameObject {
             const xStart = 116;
             const yStart = 410;
             const excludedIndices = [7, 14, 15, 21, 22, 23, 28, 29, 30, 31, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47];
-
-
 
             if (excludedIndices.includes(i)) {
                 card.container.x = slotPositions[0].x;

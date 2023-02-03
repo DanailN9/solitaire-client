@@ -15,6 +15,7 @@ export class Card {
     public rank: number;
     public suit: string;
     public fliped: boolean = false;
+    public clicked: boolean = false;
 
 
     constructor(rank: number, suit: string) {
@@ -46,16 +47,27 @@ export class Card {
         });
     }
 
-    public moveTo() {
-        // this.container.on('pointertap', () => {
-        //     slotPositions.forEach(element => {
-        //         element.interactive = true;
-        //         element.on('pointertap', () => {
-        //             gsap.to(this.container, { pixi: { x: element.x, y: element.y }, duration: 2 });
-        //         });
-        //     });
+    public moveTo(deck: Card[]) {
+        this.container.on('pointertap', () => {
+            deck.forEach(c => {
+                c.clicked = false;
+            })
+            this.clicked = true;
 
-        // });
+            if (this.clicked === true) {
+                slotPositions.forEach(element => {
+                    element.interactive = true;
+
+                    element.on('pointertap', () => {
+                        gsap.to(this.container, { pixi: { x: element.x, y: element.y }, duration: 1 });
+                        slotPositions.forEach(element => {
+                            element.interactive = false;
+                            element.off('pointertap');
+                        })
+                    });
+                });
+            }
+        });
     }
 
     public deal() {
