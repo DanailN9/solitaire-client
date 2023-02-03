@@ -37,14 +37,18 @@ export class Card {
         return this.backSprite;
     }
 
-    public flip() {
+    public backflip() {
         this.container.on('pointertap', () => {
-            if (this.fliped === false) {
-                gsap.to(this.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
-                gsap.fromTo(this.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.4, skewY: 0 }, duration: 0.1, delay: 0.1 });
-                this.fliped = true
-            }
+            this.flip();
         });
+    }
+
+    public flip() {
+        if (this.fliped === false) {
+            gsap.to(this.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
+            gsap.fromTo(this.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.4, skewY: 0 }, duration: 0.1, delay: 0.1 });
+            this.fliped = true
+        }
     }
 
     public moveTo(deck: Card[]) {
@@ -69,6 +73,8 @@ export class Card {
             }
         });
     }
+
+
 
     public deal() {
 
