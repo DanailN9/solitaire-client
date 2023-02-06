@@ -51,7 +51,7 @@ export class Card {
         }
     }
 
-    public flipToBack(){
+    public flipToBack() {
         if (this.fliped === true) {
             gsap.to(this.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
             gsap.fromTo(this.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.14, skewY: 0 }, duration: 0.1, delay: 0.1 });
@@ -59,27 +59,28 @@ export class Card {
         }
     }
 
-    public moveTo(deck: Card[]) {
+    public moveTo() {
         this.container.on('pointertap', () => {
-            deck.forEach(c => {
-                c.clicked = false;
-            })
-            this.clicked = true;
+            slotPositions.forEach(slot => {
+                slot.interactive = false;
+                slot.off('pointertap');
 
-            if (this.clicked === true) {
                 slotPositions.forEach(element => {
-                    element.interactive = true;
+                    if (element !== slotPositions[1]) {
+                        element.interactive = true;
 
-                    element.on('pointertap', () => {
-                        gsap.to(this.container, { pixi: { x: element.x, y: element.y }, duration: 1 });
-                        slotPositions.forEach(element => {
-                            element.interactive = false;
-                            element.off('pointertap');
-                        })
-                    });
+                        element.on('pointertap', () => {
+                            gsap.to(this.container, { pixi: { x: element.x, y: element.y }, duration: 1 });
+                            slotPositions.forEach(element => {
+                                element.interactive = false;
+                                element.off('pointertap');
+                            })
+                        });
+                    }
                 });
-            }
-        });
+            })
+        }
+        );
     }
 
     public deal() {

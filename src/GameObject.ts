@@ -91,7 +91,7 @@ export class GameObject {
                     break;
                 }
             }
-            card.moveTo(this.deck);
+            card.moveTo();
         }
         //suffeling the Deck
         this.shuffleDeck();
@@ -159,6 +159,9 @@ export class GameObject {
             const numCards = i - 6;
             for (let j = 0; j < numCards; j++) {
                 const card = this.deck[cardIndex];
+                if (j === numCards - 1) {
+                    card.flipToFront();
+                }
                 card.container.x = xStart + (i - 7) * columnSpacing;
                 card.container.y = yStart + j * rowSpacing;
                 this.app.stage.addChild(card.container);
