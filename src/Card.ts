@@ -39,15 +39,23 @@ export class Card {
 
     public backflip() {
         this.container.on('pointertap', () => {
-            this.flip();
+            this.flipToFront();
         });
     }
 
-    public flip() {
+    public flipToFront() {
         if (this.fliped === false) {
             gsap.to(this.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
             gsap.fromTo(this.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.4, skewY: 0 }, duration: 0.1, delay: 0.1 });
-            this.fliped = true
+            this.fliped = true;
+        }
+    }
+
+    public flipToBack(){
+        if (this.fliped === true) {
+            gsap.to(this.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
+            gsap.fromTo(this.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.14, skewY: 0 }, duration: 0.1, delay: 0.1 });
+            this.fliped = false;
         }
     }
 
@@ -73,8 +81,6 @@ export class Card {
             }
         });
     }
-
-
 
     public deal() {
 

@@ -10,7 +10,7 @@ let created: boolean = false;
 export class GameObject {
     private app: PIXI.Application;
     private deck: Card[] = [];
-    private smallDeck: Card[] = [];
+    private slotOneCards: Card[] = [];
 
     constructor() {
         if (created == false) {
@@ -69,19 +69,15 @@ export class GameObject {
             card.container.interactive = true;
             card.container.pivot.x = card.container.width / 2;
             card.container.pivot.y = card.container.height / 2;
-            card.flip()
-            card.moveTo(this.deck);
             card.sprite = new PIXI.Sprite(new PIXI.Texture(texture[0].baseTexture,
                 new PIXI.Rectangle(xClubsStartpoint, yClubsStartpoint, CARD_WIDTH, CARD_HEIGHT)));
 
             // calibrating
             this.calibratingCard(card, texture);
-
-            this.deck.push(card);
-
             //generate Mask
             const cardMask = card.generateMask(card.sprite.x, card.sprite.y);
 
+            this.deck.push(card);
             //add to Container
             card.container.addChild(card.sprite, card.backSprite, cardMask);
 
@@ -95,71 +91,87 @@ export class GameObject {
                     break;
                 }
             }
+            card.moveTo(this.deck);
         }
+        //suffeling the Deck
+        this.shuffleDeck();
         //rendering Cards
-        this.renderCard();
+        this.renderCards();
+        //Moving deck cards to SlotPosition 1
+        this.showTopCardFromDeck();
+    }
 
-        this.deck.forEach((c, index) => {
-            const top = this.deck[this.deck.length - 1];
-            if (index === this.deck.length - 1) {
+    private showTopCardFromDeck() {
+
+        for (let i = this.deck.length - 1; i >= 0; i--) {
+            let top = this.deck[i];
+
+            if (top.container.x == slotPositions[0].x && top.container.y == slotPositions[0].y) {
                 top.container.interactive = true;
                 top.container.on('pointertap', () => {
-
-                    if (this.deck.length > 0) {
-                        this.deck.pop();
-                        const topCard = this.deck[this.deck.length - 1];
-                        this.moveTopCardToSlot1(topCard);
-                        console.log('yes');
-                    } else {
-                        console.log('no');
-                        console.log(this.deck);
-                    }
+                    this.moveTopCardToSlot1(top, i);
                 });
             }
-        });
-        //console.log(this.deck);
+        }
     }
 
-    public renderCard() {
-        //this.shuffleDeck();
-
-        for (let i = 0; i < this.deck.length; i++) {
-            //constants
-            const card = this.deck[i];
-            const rowSpacing = 40;
-            const columnSpacing = card.sprite.width + 90;
-            const xStart = 116;
-            const yStart = 410;
-            const excludedIndices = [7, 14, 15, 21, 22, 23, 28, 29, 30, 31, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47];
-
-            //POSITION CARDS ON STAGE
-
-            if (excludedIndices.includes(i)) {
-                card.container.x = slotPositions[0].x;
-                card.container.y = slotPositions[0].y;
-                this.smallDeck.push(card);
-
-            } else if (i < 49) {
-                card.container.x = (i % 7) * columnSpacing + xStart;
-                card.container.y = yStart + Math.floor(i / 7) * (rowSpacing)
-            } else {
-                card.container.x = slotPositions[0].x;
-                card.container.y = slotPositions[0].y;
-                this.smallDeck.push(card);
-            }
-            this.app.stage.addChild(card.container);
-        };
-    }
-
-    private moveTopCardToSlot1(topCard: Card) {
-        if (slotPositions[1] && this.deck.length > 0) {
+    private moveTopCardToSlot1(topCard: Card, index: number) {
+        if (this.deck.length > 27) {
             this.app.stage.addChild(topCard.container);
             gsap.to(topCard.container, {
                 pixi: { x: slotPositions[1].x, y: slotPositions[1].y }, duration: 0.1, onComplete: () => {
-                    topCard.flip();
+                    topCard.flipToFront();
                     console.log(`${topCard.suit} -> ${topCard.rank}`);
+                    this.deck.splice(index, 1);
+
+                    this.slotOneCards.unshift(topCard);
+                    console.log(this.deck);
+                    console.log(this.slotOneCards);
+
+                    slotPositions[0].on('pointertap', this.moveAllCardsToDeck.bind(this));
                 }
             });
+        };
+    };
+
+    private moveAllCardsToDeck() {
+        this.slotOneCards.forEach(c => {
+            this.app.stage.addChild(c.container);
+            gsap.to(c.container, {
+                pixi: { x: slotPositions[0].x, y: slotPositions[0].y }, duration: 0.1, onComplete: () => {
+                    c.flipToBack();
+                    this.deck.push(c);
+                    console.log(`${c} -> ${c.rank}`);
+                }
+            });
+        });
+        this.slotOneCards = [];
+    }
+
+    private renderCards() {
+        let cardIndex = 0;
+        const xStart = 116;
+        const yStart = 410;
+        const columnSpacing = this.deck[0].sprite.width + 90;
+        const rowSpacing = 40;
+        //put cards into slotPosition[7]  to slotPosition[13];
+        for (let i = 7; i <= 13; i++) {
+            const numCards = i - 6;
+            for (let j = 0; j < numCards; j++) {
+                const card = this.deck[cardIndex];
+                card.container.x = xStart + (i - 7) * columnSpacing;
+                card.container.y = yStart + j * rowSpacing;
+                this.app.stage.addChild(card.container);
+                cardIndex++;
+            }
+        }
+        //put into the deck  slotPosition[0];
+        for (let i = 0; i < 24; i++) {
+            const card = this.deck[cardIndex];
+            card.container.x = slotPositions[0].x;
+            card.container.y = slotPositions[0].y;
+            this.app.stage.addChild(card.container);
+            cardIndex++;
         }
     }
 
@@ -196,8 +208,6 @@ export class GameObject {
         card.container.interactive = true;
         card.container.pivot.x = card.container.width / 2;
         card.container.pivot.y = card.container.height / 2;
-        //card.flip()
-        //card.moveTo();
 
         card.backSprite.scale.x = 0.14;
         card.backSprite.scale.y = 0.14;
