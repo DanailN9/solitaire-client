@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import { Card } from "./Card";
 
 //Constants
 export const ROW_LENGTH = 2;
@@ -10,3 +11,5 @@ export const APP_HEIGHT = 840;
 export const ASSET_WIDTH = 6000;
 export const ASSET_HEIGHT = 4000;
 export const slotPositions: PIXI.Graphics[] = [];
+export const flippedCardContainers: PIXI.Container[] = [];
+export let pilesContainer: Card[][] = [];

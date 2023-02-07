@@ -1,10 +1,13 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { PixiPlugin } from "gsap/PixiPlugin";
-import { slotPositions } from './utility';
+import { pilesContainer, slotPositions } from './utility';
 
 gsap.registerPlugin(PixiPlugin);
 PixiPlugin.registerPIXI(PIXI);
+
+let lastSelectedCard = false;
+let lastSelectedCardArray: PIXI.Container[] = [];
 
 export class Card {
     private width: 415;
@@ -48,6 +51,7 @@ export class Card {
             gsap.to(this.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
             gsap.fromTo(this.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.4, skewY: 0 }, duration: 0.1, delay: 0.1 });
             this.fliped = true;
+            this.moveTo();
         }
     }
 
@@ -60,27 +64,62 @@ export class Card {
     }
 
     public moveTo() {
+        //WARNING CALLBACK HELL
         this.container.on('pointertap', () => {
-            slotPositions.forEach(slot => {
-                slot.interactive = false;
-                slot.off('pointertap');
+            if (!lastSelectedCard) {
+                lastSelectedCard = true;
+                lastSelectedCardArray.push(this.container);
 
-                slotPositions.forEach(element => {
-                    if (element !== slotPositions[1]) {
-                        element.interactive = true;
+                slotPositions.forEach(slot => {
+                    slot.interactive = false;
+                    slot.off('pointertap');
 
-                        element.on('pointertap', () => {
-                            gsap.to(this.container, { pixi: { x: element.x, y: element.y }, duration: 1 });
-                            slotPositions.forEach(element => {
-                                element.interactive = false;
-                                element.off('pointertap');
-                            })
-                        });
+                    slotPositions.forEach(element => {
+                        if (element !== slotPositions[1]) {
+                            element.interactive = true;
+
+                            element.on('pointertap', () => {
+                                gsap.to(this.container, { pixi: { x: element.x, y: element.y }, duration: 0.4, onComplete:() =>{
+                                    this.showLastCard(this.container);
+                                } });
+                                slotPositions.forEach(element => {
+                                    element.interactive = false;
+                                    element.off('pointertap');
+                                    lastSelectedCard = false;
+                                })
+                            });
+                        }
+                    });
+                })
+
+            } else {
+                const selectedCard = lastSelectedCardArray[0];
+
+                gsap.to(selectedCard, {
+                    pixi: { x: this.container.x, y: this.container.y + 40 }, duration: 0.4, onComplete: () => {
+                        this.showLastCard(selectedCard);
                     }
-                });
-            })
-        }
-        );
+                })
+                lastSelectedCard = false;
+                lastSelectedCardArray.pop();
+
+            }
+        });
+    }
+
+    private showLastCard(card: PIXI.Container) {
+        for (let pile of pilesContainer) {
+            for (let c of pile) {
+                if (c.container.x == card.x && c.container.y == card.y) {
+                    const cardIndex = pile.indexOf(c);
+                    pile.splice(cardIndex, 1);
+                    console.log(pile.length);
+                    if (pile.length > 0) {
+                        pile[cardIndex - 1].flipToFront();
+                    }
+                }
+            }
+        };
     }
 
     public deal() {

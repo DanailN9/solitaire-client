@@ -1,8 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { Card } from './Card';
-import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, CARD_HEIGHT, CARD_WIDTH, COL_LENGTH, ROW_LENGTH, slotPositions } from './utility';
+import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, CARD_HEIGHT, CARD_WIDTH, COL_LENGTH, pilesContainer, ROW_LENGTH, slotPositions } from './utility';
 import { gsap } from 'gsap';
-
 
 const gameSection = document.getElementById('game');
 let created: boolean = false;
@@ -91,7 +90,6 @@ export class GameObject {
                     break;
                 }
             }
-            card.moveTo();
         }
         //suffeling the Deck
         this.shuffleDeck();
@@ -156,18 +154,24 @@ export class GameObject {
         const rowSpacing = 40;
         //put cards into slotPosition[7]  to slotPosition[13];
         for (let i = 7; i <= 13; i++) {
+            let pile: Card[] = [];
             const numCards = i - 6;
             for (let j = 0; j < numCards; j++) {
                 const card = this.deck[cardIndex];
                 if (j === numCards - 1) {
-                    card.flipToFront();
+                    card.flipToFront();            
                 }
                 card.container.x = xStart + (i - 7) * columnSpacing;
                 card.container.y = yStart + j * rowSpacing;
+            
                 this.app.stage.addChild(card.container);
                 cardIndex++;
+                
+                pile.push(card);
             }
+            pilesContainer.push(pile);
         }
+        
         //put into the deck  slotPosition[0];
         for (let i = 0; i < 24; i++) {
             const card = this.deck[cardIndex];
@@ -213,7 +217,7 @@ export class GameObject {
         card.container.pivot.y = card.container.height / 2;
 
         card.backSprite.scale.x = 0.14;
-        card.backSprite.scale.y = 0.14;
+        card.backSprite.scale.y = 0.146;
         card.backSprite.anchor.set(0.5, 0.5)
 
         card.sprite.scale.x = 0.4;
