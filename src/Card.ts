@@ -70,39 +70,44 @@ export class Card {
                 lastSelectedCard = true;
                 lastSelectedCardArray.push(this.container);
 
+                //Turn off eventListeners turned on by last selected card
                 slotPositions.forEach(slot => {
                     slot.interactive = false;
                     slot.off('pointertap');
-
-                    slotPositions.forEach(element => {
-                        if (element !== slotPositions[1]) {
-                            element.interactive = true;
-
-                            element.on('pointertap', () => {
-                                gsap.to(this.container, { pixi: { x: element.x, y: element.y }, duration: 0.4, onComplete:() =>{
-                                    this.showLastCard(this.container);
-                                } });
-                                slotPositions.forEach(element => {
-                                    element.interactive = false;
-                                    element.off('pointertap');
-                                    lastSelectedCard = false;
-                                })
-                            });
-                        }
-                    });
                 })
+
+                //Turn on eventListeners 
+                slotPositions.forEach(slot => {
+                    if (slot !== slotPositions[1]) {
+                        slot.interactive = true;
+
+                        slot.on('pointertap', () => {
+                            gsap.to(this.container, {
+                                pixi: { x: slot.x, y: slot.y }, duration: 0.4,
+                            });
+
+                            //Turn off eventListeners 
+                            slotPositions.forEach(slot => {
+                                slot.interactive = false;
+                                slot.off('pointertap');
+                            })
+
+                            lastSelectedCard = false;
+                            lastSelectedCardArray.pop();
+                        });
+                    }
+                });
 
             } else {
                 const selectedCard = lastSelectedCardArray[0];
 
                 gsap.to(selectedCard, {
                     pixi: { x: this.container.x, y: this.container.y + 40 }, duration: 0.4, onComplete: () => {
-                        this.showLastCard(selectedCard);
+                        //this.showLastCard(selectedCard);
+                        lastSelectedCard = false;
+                        lastSelectedCardArray.pop();
                     }
                 })
-                lastSelectedCard = false;
-                lastSelectedCardArray.pop();
-
             }
         });
     }

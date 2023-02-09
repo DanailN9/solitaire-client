@@ -10,6 +10,8 @@ export class GameObject {
     private app: PIXI.Application;
     private deck: Card[] = [];
     private slotOneCards: Card[] = [];
+    private state: any;
+    private moves: any;
 
     constructor() {
         if (created == false) {
@@ -60,7 +62,7 @@ export class GameObject {
 
         for (let i = 0; i < 52; i++) {
 
-            const number = (i + 1) % 13;
+            let number = (i + 1) % 13 == 0 ? 13 : (i + 1) % 13;
             const suit = suits[Math.floor(i / 13)];
             const card = new Card(number, suit);
 
@@ -91,12 +93,23 @@ export class GameObject {
                 }
             }
         }
-        //suffeling the Deck
-        this.shuffleDeck();
-        //rendering Cards
+        // //suffeling the Deck
+        // this.shuffleDeck();
+        // //rendering Cards
+        // this.renderCards()
+        // //Moving deck cards to SlotPosition 1
+        //this.showTopCardFromDeck();
+    }
+
+    public setState(state: any) {
+        this.state = state;
         this.renderCards();
-        //Moving deck cards to SlotPosition 1
-        this.showTopCardFromDeck();
+
+    }
+
+    public setMoves(moves: any) {
+        this.moves = moves;
+        console.log();
     }
 
     private showTopCardFromDeck() {
@@ -147,38 +160,40 @@ export class GameObject {
     }
 
     private renderCards() {
-        let cardIndex = 0;
+        const pilesArray = this.state.piles;
         const xStart = 116;
         const yStart = 410;
         const columnSpacing = this.deck[0].sprite.width + 90;
         const rowSpacing = 40;
         //put cards into slotPosition[7]  to slotPosition[13];
         for (let i = 7; i <= 13; i++) {
-            let pile: Card[] = [];
-            const numCards = i - 6;
-            for (let j = 0; j < numCards; j++) {
-                const card = this.deck[cardIndex];
-                if (j === numCards - 1) {
-                    card.flipToFront();            
+            //let pile: Card[] = [];
+            const index = i - 7
+            for (let j = 0; j < pilesArray[index].cards.length; j++) {
+                const card = pilesArray[index].cards[j];
+
+                const realCard = this.deck.find(c => c.suit === card.suit && c.rank === card.face);
+
+                if (card.faceUp === true) {
+                    realCard.flipToFront();
                 }
-                card.container.x = xStart + (i - 7) * columnSpacing;
-                card.container.y = yStart + j * rowSpacing;
-            
-                this.app.stage.addChild(card.container);
-                cardIndex++;
-                
-                pile.push(card);
+                realCard.container.x = xStart + (i - 7) * columnSpacing;
+                realCard.container.y = yStart + j * rowSpacing;
+
+                this.app.stage.addChild(realCard.container);
+
+                //pile.push(card);
             }
-            pilesContainer.push(pile);
+            //pilesContainer.push(pile);
         }
-        
-        //put into the deck  slotPosition[0];
-        for (let i = 0; i < 24; i++) {
-            const card = this.deck[cardIndex];
-            card.container.x = slotPositions[0].x;
-            card.container.y = slotPositions[0].y;
-            this.app.stage.addChild(card.container);
-            cardIndex++;
+
+        for (let i = 0; i < this.state.stock.cards.length; i++) {
+            const card = this.state.stock.cards[i];
+
+            const realCard = this.deck.find(c => c.suit === card.suit && c.rank === card.face)
+            realCard.container.x = slotPositions[0].x;
+            realCard.container.y = slotPositions[0].y;
+            this.app.stage.addChild(realCard.container);
         }
     }
 

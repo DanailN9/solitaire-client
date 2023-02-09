@@ -14,8 +14,9 @@ initForm.addEventListener('submit', async event => {
 
     connection = new Connection(nickname as string);
     await connection.open();
-    engine(connection);
-    showBoard();
+    const game = showBoard();
+
+    engine(connection, game);
     connection.send('startGame');
 });
 
@@ -33,6 +34,8 @@ function showBoard() {
     game.genaratePlaces();
     game.generateCards();
     game.generateAllMask();
+
+    return game
 }
 
 function showInit() {
