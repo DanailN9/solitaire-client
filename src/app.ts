@@ -30,8 +30,8 @@ function showBoard() {
     gameSection.style.display = 'block';
     //START
     const game = new GameObject();
-    game.generateBackground();
-    game.genaratePlaces();
+    const background = game.generateBackground();
+    game.genaratePlaces(background);
     game.generateCards();
     game.generateAllMask();
 

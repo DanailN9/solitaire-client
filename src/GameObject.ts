@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { Card } from './Card';
-import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, CARD_HEIGHT, CARD_WIDTH, COL_LENGTH, pilesContainer, ROW_LENGTH, slotPositions } from './utility';
+import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, CARD_HEIGHT, CARD_WIDTH, COL_LENGTH, gameInfo, pilesContainer, ROW_LENGTH, slotPositions } from './utility';
 import { gsap } from 'gsap';
 
 const gameSection = document.getElementById('game');
@@ -12,6 +12,10 @@ export class GameObject {
     private slotOneCards: Card[] = [];
     private state: any;
     private moves: any;
+    public lastSelectedCard = false;
+    public lastSelectedCardArray: PIXI.Container[] = [];
+    private deckLayer: PIXI.Container;
+    private overLayer: PIXI.Container;
 
     constructor() {
         if (created == false) {
@@ -22,6 +26,10 @@ export class GameObject {
             });
             gameSection.appendChild(this.app.view as HTMLCanvasElement);
             created = true;
+            this.deckLayer = new PIXI.Container();
+            this.deckLayer.position.set(0, 0);
+            this.overLayer = new PIXI.Container();
+            this.overLayer.position.set(0, 0);
         }
     }
 
@@ -31,9 +39,10 @@ export class GameObject {
         background.drawRect(0, 0, APP_WIDTH, APP_HEIGHT);
         background.endFill();
         this.app.stage.addChild(background);
+        return background;
     }
 
-    public genaratePlaces() {
+    public genaratePlaces(background: PIXI.Graphics) {
         let xStartPosition = 113;
         let yStartPosition = 137;
         for (let row = 0; row < ROW_LENGTH; row++) {
@@ -44,13 +53,107 @@ export class GameObject {
                 }
                 const place = this.generateSinglePlace();
                 place.position.set(xStartPosition, yStartPosition);
-                this.app.stage.addChild(place);
+                background.addChild(place);
                 xStartPosition += 256;
                 slotPositions.push(place);
             }
             yStartPosition += 270;
             xStartPosition = 113;
         }
+    }
+
+    public backflip(card: Card) {
+        card.container.on('pointertap', () => {
+            this.flipToFront(card);
+        });
+    }
+
+    public flipToFront(card: Card) {
+        if (card.fliped === false) {
+            gsap.to(card.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
+            gsap.fromTo(card.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.4, skewY: 0 }, duration: 0.1, delay: 0.1 });
+            card.fliped = true;
+            this.moveTo(card);
+        }
+    }
+
+    public flipToBack(card: Card) {
+        if (card.fliped === true) {
+            gsap.to(card.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
+            gsap.fromTo(card.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.14, skewY: 0 }, duration: 0.1, delay: 0.1 });
+            card.fliped = false;
+        }
+    }
+
+    public moveTo(card: Card) {
+        //WARNING CALLBACK HELL
+        card.container.on('pointertap', () => {
+            if (!this.lastSelectedCard) {
+                this.lastSelectedCard = true;
+                this.lastSelectedCardArray.push(card.container);
+                this.deckLayer.removeChild(card.container);
+                this.overLayer.addChild(card.container);
+
+                //Turn off eventListeners turned on by last selected card
+                slotPositions.forEach(slot => {
+                    slot.interactive = false;
+                    slot.off('pointertap');
+                })
+
+                //Turn on eventListeners 
+                slotPositions.forEach(slot => {
+                    if (slot !== slotPositions[1]) {
+                        slot.interactive = true;
+
+                        slot.on('pointertap', () => {
+                            gsap.to(card.container, {
+                                pixi: { x: slot.x, y: slot.y }, duration: 0.4,
+                            });
+
+                            //Turn off eventListeners 
+                            slotPositions.forEach(slot => {
+                                slot.interactive = false;
+                                slot.off('pointertap');
+                            })
+
+                            this.lastSelectedCard = false;
+                            this.lastSelectedCardArray.pop();
+                        });
+                    }
+                });
+
+            } else {
+                const selectedCard = this.lastSelectedCardArray[0];
+                this.deckLayer.removeChild(card.container);
+                this.overLayer.addChild(card.container);
+
+                gsap.to(selectedCard, {
+                    pixi: { x: card.container.x, y: card.container.y + 40 }, duration: 0.4, onComplete: () => {
+                        //this.showLastCard(selectedCard);
+                        this.lastSelectedCard = false;
+                        this.lastSelectedCardArray.pop();
+
+                    }
+                })
+                this.overLayer.removeChild(card.container)
+                this.deckLayer.addChild(card.container);
+            }
+        });
+    }
+
+    private showLastCard(card: PIXI.Container) {
+        for (let pile of pilesContainer) {
+            for (let c of pile) {
+                if (c.container.x == card.x && c.container.y == card.y) {
+                    const cardIndex = pile.indexOf(c);
+                    pile.splice(cardIndex, 1);
+                    console.log(pile.length);
+                    if (pile.length > 0) {
+                        this.flipToFront(pile[cardIndex - 1]);
+                    }
+                }
+            }
+        };
     }
 
     public async generateCards() {
@@ -65,7 +168,6 @@ export class GameObject {
             let number = (i + 1) % 13 == 0 ? 13 : (i + 1) % 13;
             const suit = suits[Math.floor(i / 13)];
             const card = new Card(number, suit);
-
             card.backSprite = new PIXI.Sprite(texture[1]);
             card.container.interactive = true;
             card.container.pivot.x = card.container.width / 2;
@@ -99,17 +201,25 @@ export class GameObject {
         // this.renderCards()
         // //Moving deck cards to SlotPosition 1
         //this.showTopCardFromDeck();
+
     }
 
     public setState(state: any) {
         this.state = state;
+        this.app.stage.addChild(this.deckLayer, this.overLayer);
         this.renderCards();
+        gameInfo
 
     }
 
     public setMoves(moves: any) {
         this.moves = moves;
-        console.log();
+        //send('moves',state{
+        //action: "flip","take","place",
+        //index: 22,
+        //source: "stock", "pile","waste","foundation", iztochnik ot koito iskame da oburnem
+        //target:  za place dvijenieto, ,source- ot kudeto da vzemem, target- kudeto da postavim
+        //});
     }
 
     private showTopCardFromDeck() {
@@ -131,13 +241,11 @@ export class GameObject {
             this.app.stage.addChild(topCard.container);
             gsap.to(topCard.container, {
                 pixi: { x: slotPositions[1].x, y: slotPositions[1].y }, duration: 0.1, onComplete: () => {
-                    topCard.flipToFront();
+                    this.flipToFront(topCard);
                     console.log(`${topCard.suit} -> ${topCard.rank}`);
                     this.deck.splice(index, 1);
 
                     this.slotOneCards.unshift(topCard);
-                    console.log(this.deck);
-                    console.log(this.slotOneCards);
 
                     slotPositions[0].on('pointertap', this.moveAllCardsToDeck.bind(this));
                 }
@@ -150,7 +258,7 @@ export class GameObject {
             this.app.stage.addChild(c.container);
             gsap.to(c.container, {
                 pixi: { x: slotPositions[0].x, y: slotPositions[0].y }, duration: 0.1, onComplete: () => {
-                    c.flipToBack();
+                    this.flipToBack(c);
                     this.deck.push(c);
                     console.log(`${c} -> ${c.rank}`);
                 }
@@ -165,22 +273,23 @@ export class GameObject {
         const yStart = 410;
         const columnSpacing = this.deck[0].sprite.width + 90;
         const rowSpacing = 40;
+
         //put cards into slotPosition[7]  to slotPosition[13];
         for (let i = 7; i <= 13; i++) {
             //let pile: Card[] = [];
-            const index = i - 7
+            const index = i - 7;
             for (let j = 0; j < pilesArray[index].cards.length; j++) {
                 const card = pilesArray[index].cards[j];
 
                 const realCard = this.deck.find(c => c.suit === card.suit && c.rank === card.face);
 
                 if (card.faceUp === true) {
-                    realCard.flipToFront();
+                    this.flipToFront(realCard);
                 }
                 realCard.container.x = xStart + (i - 7) * columnSpacing;
                 realCard.container.y = yStart + j * rowSpacing;
 
-                this.app.stage.addChild(realCard.container);
+                this.deckLayer.addChild(realCard.container);
 
                 //pile.push(card);
             }
@@ -193,7 +302,7 @@ export class GameObject {
             const realCard = this.deck.find(c => c.suit === card.suit && c.rank === card.face)
             realCard.container.x = slotPositions[0].x;
             realCard.container.y = slotPositions[0].y;
-            this.app.stage.addChild(realCard.container);
+            this.deckLayer.addChild(realCard.container);
         }
     }
 
@@ -217,12 +326,6 @@ export class GameObject {
         place.pivot.y = place.height / 2;
 
         return place;
-    }
-
-    private shuffleDeck() {
-        this.deck.sort(function () {
-            return Math.random() - 0.5;
-        });
     }
 
     private calibratingCard(card: Card, texture: PIXI.Texture[]) {
