@@ -29,7 +29,7 @@ function showBoard() {
     initSection.style.display = 'none';
     gameSection.style.display = 'block';
     //START
-    const game = new GameObject();
+    const game = new GameObject(connection);
     const background = game.generateBackground();
     game.genaratePlaces(background);
     game.generateCards();

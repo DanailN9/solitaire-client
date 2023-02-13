@@ -2,9 +2,18 @@ import * as PIXI from 'pixi.js';
 import { Card } from './Card';
 import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, CARD_HEIGHT, CARD_WIDTH, COL_LENGTH, gameInfo, pilesContainer, ROW_LENGTH, slotPositions } from './utility';
 import { gsap } from 'gsap';
+import { Connection } from './Connection';
 
 const gameSection = document.getElementById('game');
 let created: boolean = false;
+type DeckType = 'stock' | 'pile0' | 'pile1' | 'pile2' | 'pile3' | 'pile4' | 'pile5' | 'pile6' | 'clubs' | 'diamonds' | 'hearts' | 'spades' | null;
+
+type GameMove = {
+    action: 'flip' | 'take' | 'place',
+    index: number,
+    source: DeckType,
+    target: DeckType
+}
 
 export class GameObject {
     private app: PIXI.Application;
@@ -16,8 +25,9 @@ export class GameObject {
     public lastSelectedCardArray: PIXI.Container[] = [];
     private deckLayer: PIXI.Container;
     private overLayer: PIXI.Container;
+    private expectedMove: GameMove;
 
-    constructor() {
+    constructor(public connection: Connection) {
         if (created == false) {
             this.app = new PIXI.Application({
                 width: APP_WIDTH,
@@ -73,7 +83,7 @@ export class GameObject {
             gsap.to(card.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
             gsap.fromTo(card.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.4, skewY: 0 }, duration: 0.1, delay: 0.1 });
             card.fliped = true;
-            this.moveTo(card);
+            //this.moveTo(card);
         }
     }
 
@@ -140,7 +150,7 @@ export class GameObject {
             }
         });
     }
-
+    //waiting for Refactor
     private showLastCard(card: PIXI.Container) {
         for (let pile of pilesContainer) {
             for (let c of pile) {
@@ -167,7 +177,7 @@ export class GameObject {
 
             let number = (i + 1) % 13 == 0 ? 13 : (i + 1) % 13;
             const suit = suits[Math.floor(i / 13)];
-            const card = new Card(number, suit);
+            const card = new Card(null, number, suit);
             card.backSprite = new PIXI.Sprite(texture[1]);
             card.container.interactive = true;
             card.container.pivot.x = card.container.width / 2;
@@ -184,7 +194,7 @@ export class GameObject {
             //add to Container
             card.container.addChild(card.sprite, card.backSprite, cardMask);
 
-            //cutting every single card
+            //for cutting correctly every single card
             xClubsStartpoint += 458;
             if (xClubsStartpoint >= ASSET_WIDTH - 300) {
                 xClubsStartpoint = 42;
@@ -195,49 +205,51 @@ export class GameObject {
                 }
             }
         }
-        // //suffeling the Deck
-        // this.shuffleDeck();
-        // //rendering Cards
-        // this.renderCards()
-        // //Moving deck cards to SlotPosition 1
-        //this.showTopCardFromDeck();
-
     }
 
-    public setState(state: any) {
+    public async setState(state: any) {
         this.state = state;
         this.app.stage.addChild(this.deckLayer, this.overLayer);
-        this.renderCards();
-        gameInfo
-
+        await this.renderCards();
+        //this.showTopCardFromDeck();
+        //gameInfo
     }
 
-    public setMoves(moves: any) {
-        this.moves = moves;
-        //send('moves',state{
-        //action: "flip","take","place",
-        //index: 22,
-        //source: "stock", "pile","waste","foundation", iztochnik ot koito iskame da oburnem
-        //target:  za place dvijenieto, ,source- ot kudeto da vzemem, target- kudeto da postavim
-        //});
+    public sendMove(move: GameMove) {
+        console.log(move);
+        this.expectedMove = move;
+        this.connection.send('move', move);
     }
 
-    private showTopCardFromDeck() {
+    public setResult(data: any) {
 
-        for (let i = this.deck.length - 1; i >= 0; i--) {
-            let top = this.deck[i];
-
-            if (top.container.x == slotPositions[0].x && top.container.y == slotPositions[0].y) {
-                top.container.interactive = true;
-                top.container.on('pointertap', () => {
-                    this.moveTopCardToSlot1(top, i);
-                });
+        const searchedCard = this.deck.find(c => c.suit === data.suit && c.rank === data.face);
+        if (this.expectedMove.action == 'flip') {
+            if (this.expectedMove.source == 'stock') {
+                this.deckLayer.addChild(searchedCard.container);
+                searchedCard.container.x = slotPositions[0].x;
+                searchedCard.container.y = slotPositions[0].y;
+                this.showTopCardFromDeck(searchedCard);
+            } else if (this.expectedMove.source.includes('pile')) {
+                console.log(this.expectedMove.target);
             }
         }
     }
 
+    public Victory() {
+
+    }
+    private showTopCardFromDeck(topCard: Card) {
+        topCard.container.interactive = true;
+        gsap.to(topCard.container, {
+            pixi: { x: slotPositions[1].x, y: slotPositions[1].y }, onComplete: () => {
+                this.flipToFront(topCard);
+            }
+        });
+    }
+     //waiting for Refactor
     private moveTopCardToSlot1(topCard: Card, index: number) {
-        if (this.deck.length > 27) {
+        if (this.state.stock.cards.length > 27) {
             this.app.stage.addChild(topCard.container);
             gsap.to(topCard.container, {
                 pixi: { x: slotPositions[1].x, y: slotPositions[1].y }, duration: 0.1, onComplete: () => {
@@ -252,7 +264,7 @@ export class GameObject {
             });
         };
     };
-
+     //waiting for Refactor
     private moveAllCardsToDeck() {
         this.slotOneCards.forEach(c => {
             this.app.stage.addChild(c.container);
@@ -267,43 +279,97 @@ export class GameObject {
         this.slotOneCards = [];
     }
 
-    private renderCards() {
-        const pilesArray = this.state.piles;
+    private async renderCards() {
+
+        const texture = await this.loadTextures();
+
         const xStart = 116;
         const yStart = 410;
         const columnSpacing = this.deck[0].sprite.width + 90;
         const rowSpacing = 40;
 
+        const piles = this.state.piles;
+        const foundations = this.state.foundations; //empty at start
+        const stock = this.state.stock;
+        const waste = this.state.waste; //empty at start
+        console.log(this.state);
+        console.log(stock.cards);
+
         //put cards into slotPosition[7]  to slotPosition[13];
         for (let i = 7; i <= 13; i++) {
-            //let pile: Card[] = [];
             const index = i - 7;
-            for (let j = 0; j < pilesArray[index].cards.length; j++) {
-                const card = pilesArray[index].cards[j];
+            for (let j = 0; j < piles[index].cards.length; j++) {
 
-                const realCard = this.deck.find(c => c.suit === card.suit && c.rank === card.face);
+                const receivedCard = piles[index].cards[j];
+                let card: Card;
 
-                if (card.faceUp === true) {
-                    this.flipToFront(realCard);
+                if (receivedCard.faceUp == true && receivedCard.suit != null && receivedCard.face != null) {
+                    card = this.deck.find(c => c.suit === receivedCard.suit && c.rank === receivedCard.face);
+
+                } else {
+                    const backSprite = new PIXI.Sprite(texture[1]);
+                    card = new Card(backSprite);
+                    const cardMask = card.generateMask(card.backSprite.x, card.backSprite.y);
+                    this.backSpriteSize(card);
+                    card.container.addChild(card.backSprite, cardMask);        
                 }
-                realCard.container.x = xStart + (i - 7) * columnSpacing;
-                realCard.container.y = yStart + j * rowSpacing;
+                if (card.suit) {
+                    this.flipToFront(card);
 
-                this.deckLayer.addChild(realCard.container);
+                }
+                card.container.interactive = true;
+                card.container.x = xStart + (i - 7) * columnSpacing;
+                card.container.y = yStart + j * rowSpacing;
+                this.deckLayer.addChild(card.container);
 
-                //pile.push(card);
+                card.container.on('pointertap', () => {
+                    if (card.suit == null) {
+                        this.deckLayer.removeChild(card.container);
+                    }
+                    //sending moves to server maybe...
+                    this.sendMove({
+                        action: 'take',
+                        index: piles[3].cards[3],
+                        source: 'pile3',
+                        target: null
+                    });
+                });
             }
-            //pilesContainer.push(pile);
         }
 
-        for (let i = 0; i < this.state.stock.cards.length; i++) {
-            const card = this.state.stock.cards[i];
+        for (let i = 0; i < stock.cards.length; i++) {
+            const backSprite = new PIXI.Sprite(texture[1]);
 
-            const realCard = this.deck.find(c => c.suit === card.suit && c.rank === card.face)
-            realCard.container.x = slotPositions[0].x;
-            realCard.container.y = slotPositions[0].y;
-            this.deckLayer.addChild(realCard.container);
+            const card = new Card(backSprite);
+            const cardMask = card.generateMask(card.backSprite.x, card.backSprite.y);
+
+            this.backSpriteSize(card);
+            card.container.addChild(card.backSprite, cardMask);
+
+            card.container.interactive = true;
+            card.container.x = slotPositions[0].x;
+            card.container.y = slotPositions[0].y;
+
+            this.deckLayer.addChild(card.container);
+            card.container.on('pointertap', () => {
+                this.deckLayer.removeChild(card.container);
+                //sending moves to server maybe...
+                this.sendMove({
+                    action: 'flip',
+                    index: stock.cards.length - 1,
+                    source: 'stock',
+                    target: null
+                });
+                ;
+            });
         }
+
+    }
+
+    private backSpriteSize(card: Card) {
+        card.backSprite.scale.x = 0.14;
+        card.backSprite.scale.y = 0.146;
+        card.backSprite.anchor.set(0.5, 0.5)
     }
 
     public generateAllMask() {
@@ -334,9 +400,7 @@ export class GameObject {
         card.container.pivot.x = card.container.width / 2;
         card.container.pivot.y = card.container.height / 2;
 
-        card.backSprite.scale.x = 0.14;
-        card.backSprite.scale.y = 0.146;
-        card.backSprite.anchor.set(0.5, 0.5)
+        this.backSpriteSize(card);
 
         card.sprite.scale.x = 0.4;
         card.sprite.scale.y = 0.4;

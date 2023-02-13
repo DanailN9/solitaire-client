@@ -16,14 +16,20 @@ export class Card {
     public fliped: boolean = false;
     public clicked: boolean = false;
 
-    constructor(rank: number, suit: string) {
-        this.suit = suit;
-        this.rank = rank;
-        this.sprite = new PIXI.Sprite();
-        this.backSprite = new PIXI.Sprite();
-        this.sprite.width = this.width;
-        this.sprite.height = this.height;
-        this.container = new PIXI.Container();
+    constructor(backSprite?: PIXI.Sprite, rank?: number, suit?: string) {
+
+        if (backSprite) {
+            this.backSprite = backSprite;
+            this.container = new PIXI.Container();
+        } else {
+            this.suit = suit;
+            this.rank = rank;
+            this.sprite = new PIXI.Sprite();
+            this.backSprite = new PIXI.Sprite();
+            this.sprite.width = this.width;
+            this.sprite.height = this.height;
+            this.container = new PIXI.Container();
+        }
     }
 
     public getSprite(): PIXI.Sprite {
