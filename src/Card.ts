@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js';
 import { gsap } from 'gsap';
 import { PixiPlugin } from "gsap/PixiPlugin";
+import { CardTarget, DeckType } from './utility';
 
 gsap.registerPlugin(PixiPlugin);
 PixiPlugin.registerPIXI(PIXI);
@@ -15,6 +16,9 @@ export class Card {
     public suit: string;
     public fliped: boolean = false;
     public clicked: boolean = false;
+    public target: CardTarget;
+    public indx: number;
+    public src: CardTarget;
 
     constructor(backSprite?: PIXI.Sprite, rank?: number, suit?: string) {
 

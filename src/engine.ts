@@ -12,9 +12,8 @@ export function engine(connection: Connection, game: GameObject) {
     function onMoves(receivedMoves) {
         let moves = {};
         moves = receivedMoves;
-        //game.sendMoves(receivedMoves);
-        console.log('received moves', moves);
-        //mergeMoves();
+        game.sendMove(receivedMoves);
+        game.receivedMoves(moves);
     }
 
     function onState(state) {
@@ -23,8 +22,8 @@ export function engine(connection: Connection, game: GameObject) {
     }
 
     function onResult(data: any) {
+       // console.log(data);
         game.setResult(data);
-        console.log('moves', data);
     }
 
     function onVictory() {
