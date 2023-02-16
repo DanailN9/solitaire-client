@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { Card } from './Card';
-import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, BACKSPRITE_SCALE_X, BACKSPRITE_SCALE_Y, CardTarget, CARD_HEIGHT, CARD_WIDTH, COL_LENGTH, DeckType, findTarget, FRONTSPRITE_SCALE_X, FRONTSPRITE_SCALE_Y, gameInfo, pilesContainer, ROW_LENGTH, slotPositions } from './utility';
+import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, BACKSPRITE_SCALE_X, BACKSPRITE_SCALE_Y, CARD_HEIGHT, CARD_WIDTH, checkFoundations, COL_LENGTH, DeckType, findTarget, FRONTSPRITE_SCALE_X, FRONTSPRITE_SCALE_Y, moveCardToCardAnimation, moveToSlotAnimation, ROW_LENGTH, slotPositions } from './utility';
 import { gsap } from 'gsap';
 import { Connection } from './Connection';
 
@@ -12,7 +12,7 @@ type GameMove = {
     action: 'flip' | 'take' | 'place',
     index: number,
     source: DeckType,
-    target: DeckType | CardTarget
+    target: DeckType
 }
 
 export class GameObject {
@@ -21,7 +21,7 @@ export class GameObject {
     private slotOneCards: Card[] = [];
     private state: any;
     private moves: any;
-    public lastSelectedCard = false;
+    public lastSelectedCard: boolean = false;
     public lastSelectedCardArray: Card[] = [];
     private deckLayer: PIXI.Container;
     private overLayer: PIXI.Container;
@@ -29,9 +29,13 @@ export class GameObject {
     private data: any;
     private lastPositionX: number = 0;
     private lastPositionY: number = 0;
-    private src: DeckType;
-    private indx: number = 0;
-    private targetPlace: DeckType
+    private backSrc: DeckType;
+    private backIndx: number = 0;
+    private targetPlace: DeckType;
+    private wasteIndex: number = 0;
+    private foundationIndexes: object[] = [{ clubsIndex: 0 }, { diamondsIndex: 0 }, { heartsIndex: 0 }, { spadesIndex: 0 }];
+    private slotX: number = 0;
+    private slotY: number = 0;
 
     constructor(public connection: Connection) {
         if (created == false) {
@@ -101,7 +105,6 @@ export class GameObject {
     }
 
     public activateEventListener(card: Card) {
-        //WARNING CALLBACK HELL
         card.container.on('pointertap', () => {
             if (card.fliped == false) {
                 return;
@@ -110,102 +113,33 @@ export class GameObject {
             if (!this.lastSelectedCard) {
                 this.lastSelectedCard = true;
                 this.lastSelectedCardArray.push(card);
+
+                //Turn off eventListeners turned on by last selected searchedCard
+                slotPositions.forEach(slot => {
+                    slot.interactive = false;
+                    slot.off('pointertap');
+                })
+
+                console.log('Taking', card.src)
+
                 this.sendMove({
                     action: 'take',
                     index: card.indx,
                     source: card.src,
                     target: null
                 });
-                this.deckLayer.removeChild(card.container);
-                this.overLayer.addChild(card.container);
-
-                //Turn off eventListeners turned on by last selected card
-                slotPositions.forEach(slot => {
-                    slot.interactive = false;
-                    slot.off('pointertap');
-                })
-
-                //Turn on eventListeners 
-                for (let i = 0; i < slotPositions.length; i++) {
-                    const slot = slotPositions[i];
-                    slot.interactive = true;
-
-                    slot.on('pointertap', () => {
-
-                        this.targetPlace = findTarget(i);
-
-                        this.sendMove({
-                            action: 'place',
-                            source: card.src,
-                            target: this.targetPlace,
-                            index: card.indx
-                        })
-                        if (this.data == true) {
-                            gsap.to(card.container, {
-                                pixi: { x: slot.x, y: slot.y }, duration: 0.4,
-                            });
-
-                            //Turn off eventListeners 
-                            slotPositions.forEach(slot => {
-                                slot.interactive = false;
-                                slot.off('pointertap');
-                            })
-
-                            this.lastSelectedCard = false;
-                            this.lastSelectedCardArray.pop();
-                        }
-                    });
-
-                };
-
             } else {
-                console.log(card.target)
+                this.lastSelectedCardArray.push(card)
                 const selectedCard = this.lastSelectedCardArray[0];
                 this.sendMove({
                     action: 'place',
                     source: selectedCard.src,
                     target: card.target,
-                    index: card.indx
+                    index: selectedCard.indx
                 });
-
-                if (this.data == true) {
-                   
-                    selectedCard.target = card.target;
-                    selectedCard.indx = card.indx + 1;
-                    selectedCard.src = card.src;
-                    this.deckLayer.removeChild(card.container);
-                    this.overLayer.addChild(card.container);
-
-                    gsap.to(selectedCard.container, {
-                        pixi: { x: card.container.x, y: card.container.y + 40 }, duration: 0.4, onComplete: () => {
-                            //this.showLastCard(selectedCard);
-                            this.lastSelectedCard = false;
-                            this.lastSelectedCardArray.pop();
-
-                        }
-                    })
-                    this.overLayer.removeChild(card.container)
-                    this.deckLayer.addChild(card.container);
-                }
+                this.lastSelectedCard = false;
             }
-            //-----------------
-
         });
-    }
-    //waiting for Refactor
-    private showLastCard(card: PIXI.Container) {
-        for (let pile of pilesContainer) {
-            for (let c of pile) {
-                if (c.container.x == card.x && c.container.y == card.y) {
-                    const cardIndex = pile.indexOf(c);
-                    pile.splice(cardIndex, 1);
-                    console.log(pile.length);
-                    if (pile.length > 0) {
-                        this.flipToFront(pile[cardIndex - 1]);
-                    }
-                }
-            }
-        };
     }
 
     public async generateCards() {
@@ -286,19 +220,124 @@ export class GameObject {
                 this.deckLayer.addChild(searchedCard.container);
                 searchedCard.container.x = slotPositions[0].x;
                 searchedCard.container.y = slotPositions[0].y;
+                searchedCard.src = 'stock';
+                searchedCard.indx = this.wasteIndex;
+                this.wasteIndex++;
+                this.lastSelectedCard = false;
                 this.topCardToWaste(searchedCard);
+
             } else if (this.expectedMove.source.includes('pile')) {
                 this.deckLayer.addChild(searchedCard.container);
+                searchedCard.indx = this.backIndx;
+                searchedCard.src = this.backSrc;
+                searchedCard.target = this.backSrc;
                 searchedCard.container.x = this.lastPositionX;
                 searchedCard.container.y = this.lastPositionY;
                 this.flipToFront(searchedCard);
             }
-        } else if (this.expectedMove.action = 'take') {
+        } else if (this.expectedMove.action === 'take') {
+            const searchedCard = this.lastSelectedCardArray[0]
 
+            //Turn on eventListeners 
+            for (let i = 0; i < slotPositions.length; i++) {
+                const slot = slotPositions[i];
+                slot.interactive = true;
 
+                slot.on('pointertap', () => {
+                    //finding slot type 
+                    this.targetPlace = findTarget(i);
+
+                    this.slotX = slot.x;
+                    this.slotY = slot.y;
+                    console.log('SLOT0', this.targetPlace)
+
+                    this.sendMove({
+                        action: 'place',
+                        source: searchedCard.src,
+                        target: this.targetPlace,
+                        index: searchedCard.indx
+                    })
+                });
+            };
         } else if (this.expectedMove.action = 'place') {
-            if (this.expectedMove.source) {
+            if (data === true) {
+                if (this.lastSelectedCardArray.length === 1) {
+                    console.log('aaaaaaaaaaaaaaaaaaa')
+                    const selectedCard = this.lastSelectedCardArray[0];
+                    this.deckLayer.removeChild(selectedCard.container);
+                    this.overLayer.addChild(selectedCard.container);
 
+                    if (selectedCard.src === 'clubs') {
+                        this.foundationIndexes[0]['clubsIndex']--
+                    } else if (selectedCard.src === 'diamonds') {
+                        this.foundationIndexes[1]['diamondsindex']--
+                    } else if (selectedCard.src === 'hearts') {
+                        this.foundationIndexes[2]['heartsIndex']--
+                    } else if (selectedCard.src === 'spades') {
+                        this.foundationIndexes[3]['spadesIndex']--
+                    }
+
+                    selectedCard.src = this.targetPlace;
+                    selectedCard.target = this.targetPlace;
+
+                    //Check foundation indexes exported from utility 
+                    checkFoundations(this.targetPlace, selectedCard, this.foundationIndexes)
+
+                    //if the card is located on the waste, and moved from there, decrement the waste index 
+                    if (selectedCard.container.x === slotPositions[1].x && selectedCard.container.y === slotPositions[1].y) {
+                        this.wasteIndex--
+                    }
+
+                    //Move to slot animation
+                    moveToSlotAnimation(selectedCard, this.slotX, this.slotY);
+
+                    //Turn off eventListeners 
+                    slotPositions.forEach(slot => {
+                        slot.interactive = false;
+                        slot.off('pointertap');
+                    })
+                    this.overLayer.removeChild(selectedCard.container);
+                    this.deckLayer.addChild(selectedCard.container);
+
+                    this.lastSelectedCard = false;
+                    this.lastSelectedCardArray.pop();
+
+                } else {
+                    //TARGET CARD
+                    const secondCard = this.lastSelectedCardArray.pop();
+                    //SELECTED CARD
+                    const selectedCard = this.lastSelectedCardArray.pop();
+
+                    this.deckLayer.removeChild(selectedCard.container);
+                    this.overLayer.addChild(selectedCard.container);
+
+                    selectedCard.target = secondCard.target;
+                    selectedCard.indx = secondCard.indx + 1;
+                    selectedCard.src = secondCard.src;
+                    console.log(secondCard.src)
+
+                    //if the card is located on the waste, and moved from there, decrement the waste index 
+                    if (selectedCard.container.x === slotPositions[1].x && selectedCard.container.y === slotPositions[1].y) {
+                        this.wasteIndex--
+                    }
+                    //movingCards animation
+                    if (selectedCard.target === 'clubs' || selectedCard.target === 'diamonds' || selectedCard.target === 'hearts' || selectedCard.target === 'spades') {
+                        moveCardToCardAnimation(selectedCard, secondCard, 0)
+                    } else {
+                        moveCardToCardAnimation(selectedCard, secondCard, 40)
+                    }
+
+                    this.overLayer.removeChild(selectedCard.container)
+                    this.deckLayer.addChild(selectedCard.container);
+
+                    this.lastSelectedCardArray.splice(0, this.lastSelectedCardArray.length - 1)
+
+
+                }
+            } else {
+                this.lastSelectedCard = false;
+                this.lastSelectedCardArray.splice(0, this.lastSelectedCardArray.length)
+                console.log(this.lastSelectedCardArray)
             }
         }
     }
@@ -315,23 +354,6 @@ export class GameObject {
             }
         });
     }
-    //waiting for Refactor
-    private moveTopCardToSlot1(topCard: Card, index: number) {
-        if (this.state.stock.cards.length > 27) {
-            this.app.stage.addChild(topCard.container);
-            gsap.to(topCard.container, {
-                pixi: { x: slotPositions[1].x, y: slotPositions[1].y }, duration: 0.1, onComplete: () => {
-                    this.flipToFront(topCard);
-                    console.log(`${topCard.suit} -> ${topCard.rank}`);
-                    this.deck.splice(index, 1);
-
-                    this.slotOneCards.unshift(topCard);
-
-                    slotPositions[0].on('pointertap', this.moveAllCardsToDeck.bind(this));
-                }
-            });
-        };
-    };
     //waiting for Refactor
     private moveAllCardsToDeck() {
         this.slotOneCards.forEach(c => {
@@ -387,6 +409,8 @@ export class GameObject {
 
                         this.lastPositionX = card.container.x;
                         this.lastPositionY = card.container.y;
+                        this.backIndx = j;
+                        this.backSrc = `pile${index}`
                         this.deckLayer.removeChild(card.container);
                         this.sendMove({
                             action: 'flip',
@@ -424,10 +448,10 @@ export class GameObject {
             this.deckLayer.addChild(card.container);
             card.container.on('pointertap', () => {
                 this.deckLayer.removeChild(card.container);
-                //sending moves to server maybe...
+                this.backIndx = i;
                 this.sendMove({
                     action: 'flip',
-                    index: stock.cards.length - 1,
+                    index: i,
                     source: 'stock',
                     target: null
                 });

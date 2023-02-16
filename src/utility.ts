@@ -1,5 +1,11 @@
 import * as PIXI from "pixi.js";
 import { Card } from "./Card";
+import { gsap } from 'gsap';
+import { PixiPlugin } from "gsap/PixiPlugin";
+import dist from "gsap/dist";
+
+gsap.registerPlugin(PixiPlugin);
+PixiPlugin.registerPIXI(PIXI);
 
 //Constants
 export const ROW_LENGTH = 2;
@@ -18,9 +24,8 @@ export const slotPositions: PIXI.Graphics[] = [];
 export const flippedCardContainers: PIXI.Container[] = [];
 export let pilesContainer: Card[][] = [];
 export let i = 0;
-export type CardTarget = 'pile0' | 'pile1' | 'pile2' | 'pile3' | 'pile4' | 'pile5' | 'pile6' | 'clubs' | 'diamonds' | 'hearts' | 'spades'| `pile${typeof i}`;
+// export type CardTarget = 'stock' | 'pile0' | 'pile1' | 'pile2' | 'pile3' | 'pile4' | 'pile5' | 'pile6' | 'clubs' | 'diamonds' | 'hearts' | 'spades' | `pile${typeof i}`;
 export type DeckType = 'stock' | 'pile0' | 'pile1' | 'pile2' | 'pile3' | 'pile4' | 'pile5' | 'pile6' | 'clubs' | 'diamonds' | 'hearts' | 'spades' | null | `pile${typeof i}` | 'waste';
-
 
 export function findTarget(i: number) {
     let targetPlace: DeckType;
@@ -36,101 +41,56 @@ export function findTarget(i: number) {
         targetPlace = 'hearts'
     } else if (i == 5) {
         targetPlace = 'spades'
-    } else if (i == 7) {
+    } else if (i == 6) {
         targetPlace = 'pile0'
-    } else if (i == 8) {
+    } else if (i == 7) {
         targetPlace = 'pile1'
-    } else if (i == 9) {
+    } else if (i == 8) {
         targetPlace = 'pile2'
-    } else if (i == 10) {
+    } else if (i == 9) {
         targetPlace = 'pile3'
-    } else if (i == 11) {
+    } else if (i == 10) {
         targetPlace = 'pile4'
-    } else if (i == 12) {
+    } else if (i == 11) {
         targetPlace = 'pile5'
-    } else if (i == 13) {
+    } else if (i == 12) {
         targetPlace = 'pile6'
     }
     return targetPlace;
 }
 
-export const gameInfo = {
-    foundations: {
-        clubs: {
-            cards: [],
-            suit: 'clubs',
-            type: 'foundation'
-        },
-        diamonds: {
-            cards: [],
-            suit: 'diamonds',
-            type: 'foundation'
+export function checkFoundations(targetPlace: DeckType, selectedCard: Card, foundationIndexes: object[]) {
+    if (targetPlace === 'clubs') {
+        const num: number = foundationIndexes[0]['clubsIndex']
+        selectedCard.indx = num;
+        foundationIndexes[0]['clubsIndex']++;
 
-        },
-        hearts: {
-            cards: [],
-            suit: 'hearts',
-            type: 'foundation'
+    } else if (targetPlace === 'diamonds') {
+        const num: number = foundationIndexes[1]['diamondsIndex']
+        selectedCard.indx = num;
+        foundationIndexes[1]['diamondsIndex']++;
 
-        },
-        spades: {
-            cards: [],
-            suit: 'spades',
-            type: 'foundation'
-        }
-    },
-    piles: [
-        {
-            //face: 11, suit: 'diamonds', faceUp: true
-            cards: [{}],
-            type: null,
-            suit: 'pile'
-        },
-        {
-            //face: 11, suit: 'diamonds', faceUp: true
-            cards: [{}],
-            type: null,
-            suit: 'pile'
-        },
-        {
-            //face: 11, suit: 'diamonds', faceUp: true
-            cards: [{}],
-            type: null,
-            suit: 'pile'
-        },
-        {
-            //face: 11, suit: 'diamonds', faceUp: true
-            cards: [{}],
-            type: null,
-            suit: 'pile'
-        },
-        {
-            //face: 11, suit: 'diamonds', faceUp: true
-            cards: [{}],
-            type: null,
-            suit: 'pile'
-        },
-        {
-            //face: 11, suit: 'diamonds', faceUp: true
-            cards: [{}],
-            type: null,
-            suit: 'pile'
-        },
-        {
-            //face: 11, suit: 'diamonds', faceUp: true
-            cards: [{}],
-            type: null,
-            suit: 'pile'
-        },
-    ],
-    stock: {
-        cards: [{ face: 11, suit: 'spades', faceUp: false }], // x 24
-        suit: null,
-        type: 'stock'
-    },
-    waste: {
-        cards: [{}],
-        suit: null,
-        type: 'waste'
+    } else if (targetPlace === 'hearts') {
+        const num: number = foundationIndexes[2]['heartsIndex']
+        selectedCard.indx = num;
+        foundationIndexes[2]['heartsIndex']++;
+
+    } else if (targetPlace === 'spades') {
+        const num: number = foundationIndexes[3]['spadesIndex']
+        selectedCard.indx = num;
+        foundationIndexes[3]['spadesIndex']++;
     }
+}
+
+export function moveToSlotAnimation(selectedCard: Card, slotX: number, slotY: number) {
+    gsap.to(selectedCard.container, {
+        pixi: { x: slotX, y: slotY }, duration: 0.4,
+    });
+}
+
+export function moveCardToCardAnimation(selectedCard: Card, secondCard: Card, distance: number) {
+    gsap.to(selectedCard.container, {
+        pixi: { x: secondCard.container.x, y: secondCard.container.y + distance }, duration: 0.4, onComplete: () => {
+        }
+    })
 }
