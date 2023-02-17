@@ -2,7 +2,6 @@ import * as PIXI from "pixi.js";
 import { Card } from "./Card";
 import { gsap } from 'gsap';
 import { PixiPlugin } from "gsap/PixiPlugin";
-import dist from "gsap/dist";
 
 gsap.registerPlugin(PixiPlugin);
 PixiPlugin.registerPIXI(PIXI);
@@ -22,16 +21,15 @@ export const BACKSPRITE_SCALE_X = 0.14;
 export const BACKSPRITE_SCALE_Y = 0.146;
 export const slotPositions: PIXI.Graphics[] = [];
 export const flippedCardContainers: PIXI.Container[] = [];
-export let pilesContainer: Card[][] = [];
+export const stockArr:Card[] = [];
+export const wasteArr:Card[] = [];
+
 export let i = 0;
-// export type CardTarget = 'stock' | 'pile0' | 'pile1' | 'pile2' | 'pile3' | 'pile4' | 'pile5' | 'pile6' | 'clubs' | 'diamonds' | 'hearts' | 'spades' | `pile${typeof i}`;
 export type DeckType = 'stock' | 'pile0' | 'pile1' | 'pile2' | 'pile3' | 'pile4' | 'pile5' | 'pile6' | 'clubs' | 'diamonds' | 'hearts' | 'spades' | null | `pile${typeof i}` | 'waste';
 
 export function findTarget(i: number) {
     let targetPlace: DeckType;
-    if (i == 0) {
-        targetPlace = 'stock';
-    } else if (i == 1) {
+    if (i == 1) {
         targetPlace = 'waste';
     } else if (i == 2) {
         targetPlace = 'clubs'

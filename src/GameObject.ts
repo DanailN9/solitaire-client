@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { Card } from './Card';
-import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, BACKSPRITE_SCALE_X, BACKSPRITE_SCALE_Y, CARD_HEIGHT, CARD_WIDTH, checkFoundations, COL_LENGTH, DeckType, findTarget, FRONTSPRITE_SCALE_X, FRONTSPRITE_SCALE_Y, moveCardToCardAnimation, moveToSlotAnimation, ROW_LENGTH, slotPositions } from './utility';
+import { APP_HEIGHT, APP_WIDTH, ASSET_HEIGHT, ASSET_WIDTH, BACKSPRITE_SCALE_X, BACKSPRITE_SCALE_Y, CARD_HEIGHT, CARD_WIDTH, checkFoundations, COL_LENGTH, DeckType, findTarget, FRONTSPRITE_SCALE_X, FRONTSPRITE_SCALE_Y, moveCardToCardAnimation, moveToSlotAnimation, ROW_LENGTH, slotPositions, stockArr, wasteArr } from './utility';
 import { gsap } from 'gsap';
 import { Connection } from './Connection';
 
@@ -13,16 +13,15 @@ type GameMove = {
     index: number,
     source: DeckType,
     target: DeckType
-}
+};
 
 export class GameObject {
     private app: PIXI.Application;
     private deck: Card[] = [];
-    private slotOneCards: Card[] = [];
     private state: any;
     private moves: any;
-    public lastSelectedCard: boolean = false;
-    public lastSelectedCardArray: Card[] = [];
+    private lastSelectedCard: boolean = false;
+    private lastSelectedCardArray: Card[] = [];
     private deckLayer: PIXI.Container;
     private overLayer: PIXI.Container;
     private expectedMove: GameMove;
@@ -76,19 +75,24 @@ export class GameObject {
                 background.addChild(place);
                 xStartPosition += 256;
                 slotPositions.push(place);
+                if (slotPositions.length == 1) {
+                    slotPositions[0].interactive = true;
+                    slotPositions[0].on('pointertap', this.moveAllCardsToDeck.bind(this));
+                }
             }
             yStartPosition += 270;
             xStartPosition = 113;
         }
     }
 
-    public backflip(card: Card) {
-        card.container.on('pointertap', () => {
-            this.flipToFront(card);
-        });
+    public generateAllMask() {
+        this.deck.forEach((c) => {
+            const m = c.generateMask(32, 280);
+            c.container.mask = m;
+        })
     }
 
-    public flipToFront(card: Card) {
+    private flipToFront(card: Card) {
         if (card.fliped === false) {
             gsap.to(card.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
             gsap.fromTo(card.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.4, skewY: 0 }, duration: 0.1, delay: 0.1 });
@@ -96,7 +100,7 @@ export class GameObject {
         }
     }
 
-    public flipToBack(card: Card) {
+    private flipToBack(card: Card) {
         if (card.fliped === true) {
             gsap.to(card.sprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 });
             gsap.fromTo(card.backSprite, { pixi: { scaleX: 0, skewY: 20 }, duration: 0.1 }, { pixi: { scaleX: 0.14, skewY: 0 }, duration: 0.1, delay: 0.1 });
@@ -104,9 +108,46 @@ export class GameObject {
         }
     }
 
-    public activateEventListener(card: Card) {
+    private topCardToWaste(topCard: Card) {
+        topCard.container.interactive = true;
+        gsap.to(topCard.container, {
+            pixi: { x: slotPositions[1].x, y: slotPositions[1].y }, onComplete: () => {
+                this.flipToFront(topCard);
+            }
+        });
+    }
+
+    private moveAllCardsToDeck() {
+        this.sendMove({
+            action: 'flip',
+            source: 'stock',
+            target: null,
+            index: 0
+        });
+
+        wasteArr.forEach((c) => {
+            this.overLayer.removeChild(c.container);
+            this.deckLayer.addChild(c.container);
+            gsap.to(c.container, {
+                pixi: { x: slotPositions[0].x, y: slotPositions[0].y }, duration: 0.1, onComplete: () => {
+                    this.flipToBack(c);
+                    stockArr.push(c);
+                    this.wasteIndex--;
+                }
+            });
+        });
+        wasteArr.splice(0, wasteArr.length);
+    }
+
+    private activateEventListener(card: Card) {
         card.container.on('pointertap', () => {
             if (card.fliped == false) {
+                this.sendMove({
+                    action: 'flip',
+                    source: 'stock',
+                    target: null,
+                    index: card.indx
+                })
                 return;
             }
 
@@ -115,10 +156,10 @@ export class GameObject {
                 this.lastSelectedCardArray.push(card);
 
                 //Turn off eventListeners turned on by last selected searchedCard
-                slotPositions.forEach(slot => {
-                    slot.interactive = false;
-                    slot.off('pointertap');
-                })
+                for (let i = 1; i < slotPositions.length; i++) {
+                    slotPositions[i].interactive = false;
+                    slotPositions[i].off('pointertap');
+                }
 
                 console.log('Taking', card.src)
 
@@ -181,7 +222,6 @@ export class GameObject {
                     break;
                 }
             }
-
             this.activateEventListener(card);
         }
     }
@@ -190,8 +230,6 @@ export class GameObject {
         this.state = state;
         this.app.stage.addChild(this.deckLayer, this.overLayer);
         await this.renderCards();
-        //this.showTopCardFromDeck();
-        //gameInfo
     }
 
     public sendMove(move: GameMove) {
@@ -207,9 +245,8 @@ export class GameObject {
     public setResult(data: any) {
         console.log(data);
         if (data == null) {
-            console.log(`DATA IS NULL`)
+            throw new Error('DATA IS NULL');
         }
-
         if (typeof data == 'boolean') {
             this.data = data;
         }
@@ -224,6 +261,7 @@ export class GameObject {
                 searchedCard.indx = this.wasteIndex;
                 this.wasteIndex++;
                 this.lastSelectedCard = false;
+                wasteArr.push(searchedCard);
                 this.topCardToWaste(searchedCard);
 
             } else if (this.expectedMove.source.includes('pile')) {
@@ -239,7 +277,7 @@ export class GameObject {
             const searchedCard = this.lastSelectedCardArray[0]
 
             //Turn on eventListeners 
-            for (let i = 0; i < slotPositions.length; i++) {
+            for (let i = 1; i < slotPositions.length; i++) {
                 const slot = slotPositions[i];
                 slot.interactive = true;
 
@@ -249,7 +287,7 @@ export class GameObject {
 
                     this.slotX = slot.x;
                     this.slotY = slot.y;
-                    console.log('SLOT0', this.targetPlace)
+                    // console.log('SLOT0', this.targetPlace)
 
                     this.sendMove({
                         action: 'place',
@@ -262,8 +300,13 @@ export class GameObject {
         } else if (this.expectedMove.action = 'place') {
             if (data === true) {
                 if (this.lastSelectedCardArray.length === 1) {
-                    console.log('aaaaaaaaaaaaaaaaaaa')
+
                     const selectedCard = this.lastSelectedCardArray[0];
+
+                    if (selectedCard.src == 'stock') {
+                        console.log('bbbbbbbbbbbbbbbbbbbbbbbb');
+                        wasteArr.splice(selectedCard.indx, 1);
+                    }
                     this.deckLayer.removeChild(selectedCard.container);
                     this.overLayer.addChild(selectedCard.container);
 
@@ -292,10 +335,11 @@ export class GameObject {
                     moveToSlotAnimation(selectedCard, this.slotX, this.slotY);
 
                     //Turn off eventListeners 
-                    slotPositions.forEach(slot => {
-                        slot.interactive = false;
-                        slot.off('pointertap');
-                    })
+                    for (let i = 1; i < slotPositions.length; i++) {
+                        slotPositions[i].interactive = false;
+                        slotPositions[i].off('pointertap');
+
+                    }
                     this.overLayer.removeChild(selectedCard.container);
                     this.deckLayer.addChild(selectedCard.container);
 
@@ -311,6 +355,10 @@ export class GameObject {
                     this.deckLayer.removeChild(selectedCard.container);
                     this.overLayer.addChild(selectedCard.container);
 
+                    if (selectedCard.src == 'stock') {
+                        wasteArr.splice(selectedCard.indx, 1);
+                    }
+
                     selectedCard.target = secondCard.target;
                     selectedCard.indx = secondCard.indx + 1;
                     selectedCard.src = secondCard.src;
@@ -321,18 +369,19 @@ export class GameObject {
                         this.wasteIndex--
                     }
                     //movingCards animation
-                    if (selectedCard.target === 'clubs' || selectedCard.target === 'diamonds' || selectedCard.target === 'hearts' || selectedCard.target === 'spades') {
+                    if (selectedCard.target === 'clubs' ||
+                        selectedCard.target === 'diamonds' ||
+                        selectedCard.target === 'hearts' ||
+                        selectedCard.target === 'spades') {
                         moveCardToCardAnimation(selectedCard, secondCard, 0)
                     } else {
                         moveCardToCardAnimation(selectedCard, secondCard, 40)
                     }
 
-                    this.overLayer.removeChild(selectedCard.container)
+                    this.overLayer.removeChild(selectedCard.container);
                     this.deckLayer.addChild(selectedCard.container);
 
                     this.lastSelectedCardArray.splice(0, this.lastSelectedCardArray.length - 1)
-
-
                 }
             } else {
                 this.lastSelectedCard = false;
@@ -343,30 +392,7 @@ export class GameObject {
     }
 
     public Victory() {
-
-    }
-
-    private topCardToWaste(topCard: Card) {
-        topCard.container.interactive = true;
-        gsap.to(topCard.container, {
-            pixi: { x: slotPositions[1].x, y: slotPositions[1].y }, onComplete: () => {
-                this.flipToFront(topCard);
-            }
-        });
-    }
-    //waiting for Refactor
-    private moveAllCardsToDeck() {
-        this.slotOneCards.forEach(c => {
-            this.app.stage.addChild(c.container);
-            gsap.to(c.container, {
-                pixi: { x: slotPositions[0].x, y: slotPositions[0].y }, duration: 0.1, onComplete: () => {
-                    this.flipToBack(c);
-                    this.deck.push(c);
-                    console.log(`${c} -> ${c.rank}`);
-                }
-            });
-        });
-        this.slotOneCards = [];
+        //TODO:
     }
 
     private async renderCards() {
@@ -392,10 +418,12 @@ export class GameObject {
                 let card: Card;
 
                 if (receivedCard.faceUp == true && receivedCard.suit != null && receivedCard.face != null) {
+                    //Real Card (frontSpite, backSprite, mask), stored in this.deck;
                     card = this.deck.find(c => c.suit === receivedCard.suit && c.rank === receivedCard.face);
 
                 } else {
                     const backSprite = new PIXI.Sprite(texture[1]);
+                    //Card From (backSprite, mask) only
                     card = new Card(backSprite);
                     const cardMask = card.generateMask(card.backSprite.x, card.backSprite.y);
                     this.backSpriteSize(card);
@@ -405,6 +433,7 @@ export class GameObject {
                     this.flipToFront(card);
                 }
                 if (card.suit == null) {
+                    card.container.interactive = true;
                     card.container.on('pointertap', () => {
 
                         this.lastPositionX = card.container.x;
@@ -420,12 +449,10 @@ export class GameObject {
                         });
                     })
                 } else {
-                    //console.log(card.target);
                     card.target = `pile${i - 7}`;
                     card.indx = j;
                     card.src = `pile${i - 7}`;
                 }
-                card.container.interactive = true;
                 card.container.x = xStart + (i - 7) * columnSpacing;
                 card.container.y = yStart + j * rowSpacing;
                 this.deckLayer.addChild(card.container);
@@ -434,7 +461,7 @@ export class GameObject {
         //put cards into slotPosition[0], Stock;
         for (let i = 0; i < stock.cards.length; i++) {
             const backSprite = new PIXI.Sprite(texture[1]);
-
+            //Card From (backSprite, mask) only
             const card = new Card(backSprite);
             const cardMask = card.generateMask(card.backSprite.x, card.backSprite.y);
 
@@ -455,6 +482,7 @@ export class GameObject {
                     source: 'stock',
                     target: null
                 });
+                //card.container.off('pointertap');
             });
         }
     }
@@ -463,13 +491,6 @@ export class GameObject {
         card.backSprite.scale.x = BACKSPRITE_SCALE_X;
         card.backSprite.scale.y = BACKSPRITE_SCALE_Y;
         card.backSprite.anchor.set(0.5, 0.5)
-    }
-
-    public generateAllMask() {
-        this.deck.forEach((c) => {
-            const m = c.generateMask(32, 280);
-            c.container.mask = m;
-        })
     }
 
     private async loadTextures() {
@@ -489,7 +510,6 @@ export class GameObject {
 
     private calibratingCard(card: Card, texture: PIXI.Texture[]) {
         card.backSprite = new PIXI.Sprite(texture[1]);
-        card.container.interactive = true;
         card.container.pivot.x = card.container.width / 2;
         card.container.pivot.y = card.container.height / 2;
 
